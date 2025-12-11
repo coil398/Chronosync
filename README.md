@@ -57,7 +57,12 @@ JSON形式で `tasks` 配列を定義します。
       "name": "ping_test",
       "cron_schedule": "*/5 * * * * *", 
       "command": "/bin/echo",
-      "args": ["Hello World"]
+      "args": ["Hello World"],
+      "timeout": 10,
+      "cwd": "/tmp",
+      "env": {
+        "MY_VAR": "value"
+      }
     },
     {
       "name": "shell_script_example",
@@ -78,6 +83,19 @@ JSON形式で `tasks` 配列を定義します。
 * **command**: 実行するコマンドのパス。
 * **args**: コマンドへの引数の配列。
   * **注意:** パイプ `|` やリダイレクト `>`、環境変数展開 `$VAR` を使用したい場合は、`command` にシェル（`/bin/sh` や `/bin/bash`）を指定し、`args` で `"-c"` とコマンド文字列を渡してください。
+* **timeout** (オプション): コマンド実行のタイムアウト（秒）。指定時間を超えるとプロセスはキルされます。
+* **webhook_url** (オプション): コマンド失敗時にエラー通知を送信するWebhook URL（Discord, Slack互換のJSONペイロード）。
+* **cwd** (オプション): コマンド実行時のカレントディレクトリ。
+* **env** (オプション): コマンド実行時に設定する環境変数のマップ。
+
+## 🛠️ その他の便利コマンド
+
+* **`chronsync init`**: 設定ファイルのひな形を作成します。
+* **`chronsync check`**: 設定ファイルの構文チェックを行います。
+* **`chronsync edit`**: 設定ファイルを `$EDITOR` で開き、保存時に自動チェックを行います。
+* **`chronsync list`**: 登録されているタスクの一覧を表示します。
+* **`chronsync exec <TASK_NAME>`**: 特定のタスクを即座に手動実行します（デバッグ用）。
+  * 例: `chronsync exec ping_test`
 
 ## 🚀 実行方法
 
