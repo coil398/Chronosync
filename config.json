@@ -1,0 +1,26 @@
+{
+  "tasks": [
+    {
+      "name": "ping_test_service",
+      "cron_schedule": "*/1 * * * * *",
+      "command": "/bin/sh",
+      "args": [
+        "-c",
+        "/bin/echo \"Service check at: $(date)\""
+      ]
+    },
+    {
+      "name": "hourly_cleanup",
+      "cron_schedule": "0 0 * * * *",
+      "command": "/usr/bin/find",
+      "args": [
+        "/tmp",
+        "-type",
+        "f",
+        "-mtime",
+        "+7",
+        "-delete"
+      ]
+    }
+  ]
+}
