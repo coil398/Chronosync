@@ -1,6 +1,6 @@
 [package]
-name = "Chronosync"
-version = "0.1.2"
+name = "chronosync"
+version = "0.1.3"
 edition = "2021"
 authors = ["t.kawase398@gmail.com"]
 license = "MIT"
