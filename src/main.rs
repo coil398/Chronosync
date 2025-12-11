@@ -9,8 +9,8 @@ mod commands;
 use clap::Parser;
 use cli::{Cli, Commands};
 use commands::{
-    handle_check_command, handle_edit_command, handle_init_command, handle_list_command,
-    handle_run_command, handle_service_command,
+    handle_check_command, handle_edit_command, handle_exec_command, handle_init_command,
+    handle_list_command, handle_run_command, handle_service_command,
 };
 
 #[tokio::main]
@@ -47,6 +47,9 @@ async fn main() {
         }
         Commands::Service(args) => {
             handle_service_command(args);
+        }
+        Commands::Exec(args) => {
+            handle_exec_command(args).await;
         }
     }
 }

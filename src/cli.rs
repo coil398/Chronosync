@@ -19,6 +19,7 @@ pub enum Commands {
     Edit(EditArgs),
     Check(CheckArgs),
     Service(ServiceArgs),
+    Exec(ExecArgs),
 }
 
 #[derive(clap::Args, Debug)]
@@ -63,4 +64,12 @@ pub enum ServiceAction {
     Uninstall,
     Start,
     Stop,
+}
+
+#[derive(clap::Args, Debug)]
+pub struct ExecArgs {
+    pub task_name: String,
+
+    #[arg(short, long)]
+    pub config_path: Option<PathBuf>,
 }

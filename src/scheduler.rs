@@ -101,7 +101,7 @@ impl TaskScheduler {
         }
     }
 
-    async fn execute_command(name: &str, command: &str, args: &[String], timeout: Option<u64>) {
+    pub async fn execute_command(name: &str, command: &str, args: &[String], timeout: Option<u64>) {
         info!("[{}] -> Command starting: {} {:?}", name, command, args);
 
         let mut cmd_to_run = Command::new(command);

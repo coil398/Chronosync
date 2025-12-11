@@ -1,4 +1,4 @@
-use crate::cli::{CheckArgs, EditArgs, InitArgs, ListArgs, RunArgs};
+use crate::cli::{CheckArgs, EditArgs, ExecArgs, InitArgs, ListArgs, RunArgs};
 use crate::cli::{ServiceAction, ServiceArgs};
 use crate::config;
 use crate::config::load_config;
@@ -7,7 +7,7 @@ use crate::utils;
 use crate::watcher;
 use log::{debug, error, info};
 use service_manager::{
-    RestartPolicy, ServiceInstallCtx, ServiceLabel, ServiceLevel, ServiceManager, ServiceStartCtx,
+    RestartPolicy, ServiceInstallCtx, ServiceLabel, ServiceManager, ServiceStartCtx,
     ServiceStopCtx, ServiceUninstallCtx,
 };
 use std::env;
@@ -35,17 +35,17 @@ pub async fn handle_run_command(args: RunArgs) {
     debug!("Resolved config path: {}", config_path.display());
 
     if !config_path.exists() {
-        error!("Initialization Error: Configuration file not found at path:");
+        error!("Error: Configuration file not found at path:");
         error!("-> Path: {}", config_path.display());
         process::exit(1);
     }
 
     match core_check_config(&config_path) {
         Ok(_) => {
-            info!("Initial configuration validated successfully.");
+            info!("Configuration validated successfully.");
         }
         Err(e) => {
-            error!("Initial configuration check failed. Cannot start daemon.");
+            error!("Configuration check failed. Cannot start daemon.");
             eprintln!("\n{}\n", e);
             process::exit(1);
         }
@@ -64,11 +64,11 @@ pub async fn handle_run_command(args: RunArgs) {
         }
     });
 
-    info!("[Main] chronsync Daemon started.");
+    info!("chronsync Daemon started.");
 
     match load_config(&config_path) {
         Ok(c) => {
-            info!("[Main] Initial config loaded. {} tasks.", c.tasks.len());
+            info!("Configuration loaded. {} tasks.", c.tasks.len());
             scheduler.reload_tasks(c);
         }
         Err(e) => {
@@ -85,15 +85,15 @@ pub async fn handle_run_command(args: RunArgs) {
                 match load_config(&config_path) {
                     Ok(new_config) => {
                         scheduler.reload_tasks(new_config);
-                        info!("[Main] New configuration applied. Tasks reloaded.");
+                        info!("New configuration applied. Tasks reloaded.");
                     },
                     Err(e) => {
-                        error!("[Main] Error reloading configuration (Configuration rejected): {}", e);
+                        error!("Error reloading configuration (Configuration rejected): {}", e);
                     }
                 }
             }
             _ = tokio::signal::ctrl_c() => {
-                info!("\n[Main] Ctrl+C received. Shutting down gracefully...");
+                info!("\nCtrl+C received. Shutting down gracefully...");
                 scheduler.reload_tasks(config::Config { tasks: vec![] });
                 break;
             }
@@ -413,6 +413,71 @@ pub fn handle_service_command(args: ServiceArgs) {
                     error!("Failed to stop: {}", e);
                 }
             }
+        }
+    }
+}
+
+pub async fn handle_exec_command(args: ExecArgs) {
+    let config_path = match args.config_path {
+        Some(p) => p,
+        None => match utils::get_config_path() {
+            Ok(p) => p,
+            Err(e) => {
+                error!("Error: Failed to determine configuration path.");
+                error!("Reason: {}", e);
+                process::exit(1);
+            }
+        },
+    };
+
+    debug!("Resolved config path: {}", config_path.display());
+
+    if !config_path.exists() {
+        error!("Error: Configuration file not found at path:");
+        error!("-> Path: {}", config_path.display());
+        process::exit(1);
+    }
+
+    match core_check_config(&config_path) {
+        Ok(_) => {
+            info!("Configuration validated successfully.");
+        }
+        Err(e) => {
+            error!("Configuration check failed. Cannot start daemon.");
+            eprintln!("\n{}\n", e);
+            process::exit(1);
+        }
+    }
+
+    let config = match load_config(&config_path) {
+        Ok(c) => c,
+        Err(e) => {
+            error!("Failed to load config: {}", e);
+            return;
+        }
+    };
+
+    let target_task = config.tasks.iter().find(|t| t.name == args.task_name);
+
+    match target_task {
+        Some(task) => {
+            info!("Manually executing task: '{}'", task.name);
+
+            TaskScheduler::execute_command(
+                &task.name,
+                &task.command,
+                &task.args.as_deref().unwrap_or(&[]),
+                task.timeout,
+            )
+            .await;
+
+            info!("Manual execution finished.");
+        }
+        None => {
+            error!("Task '{}' not found in configuration.", args.task_name);
+            let available: Vec<&String> = config.tasks.iter().map(|t| &t.name).collect();
+            error!("Available tasks: {:?}", available);
+            process::exit(1);
         }
     }
 }
