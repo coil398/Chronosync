@@ -7,7 +7,7 @@ use crate::utils;
 use crate::watcher;
 use log::{debug, error, info};
 use service_manager::{
-    RestartPolicy, ServiceInstallCtx, ServiceLabel, ServiceManager, ServiceStartCtx,
+    RestartPolicy, ServiceInstallCtx, ServiceLabel, ServiceLevel, ServiceManager, ServiceStartCtx,
     ServiceStopCtx, ServiceUninstallCtx,
 };
 use std::env;
@@ -341,9 +341,15 @@ pub fn handle_check_command(args: CheckArgs) {
 }
 
 pub fn handle_service_command(args: ServiceArgs) {
-    let label: ServiceLabel = "com.github.coil398.chronsync".parse().unwrap();
+    let label: ServiceLabel = "chronsync".parse().unwrap();
 
-    let manager = <dyn ServiceManager>::native().expect("Failed to detect service manager");
+    let mut manager = <dyn ServiceManager>::native().expect("Failed to detect service manager");
+
+    if args.user {
+        manager
+            .set_level(ServiceLevel::User)
+            .expect("Failed to set service level to User");
+    }
 
     match args.action {
         ServiceAction::Install => {

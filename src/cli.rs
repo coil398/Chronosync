@@ -59,6 +59,9 @@ pub struct CheckArgs {
 pub struct ServiceArgs {
     #[command(subcommand)]
     pub action: ServiceAction,
+
+    #[arg(short, long)]
+    pub user: bool,
 }
 
 #[derive(Subcommand, Debug)]
