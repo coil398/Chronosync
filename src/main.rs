@@ -9,9 +9,11 @@ use directories::UserDirs;
 use log::{debug, error, info, LevelFilter};
 use scheduler::TaskScheduler;
 use simple_logger::SimpleLogger;
+use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
+use std::process::Command;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about=None)]
@@ -28,6 +30,8 @@ enum Commands {
     Run(RunArgs),
     List(ListArgs),
     Init(InitArgs),
+    Edit(EditArgs),
+    Check(CheckArgs),
 }
 
 #[derive(clap::Args, Debug)]
@@ -44,6 +48,18 @@ struct ListArgs {
 
 #[derive(clap::Args, Debug)]
 struct InitArgs {
+    #[arg(short, long)]
+    config_path: Option<PathBuf>,
+}
+
+#[derive(clap::Args, Debug)]
+struct EditArgs {
+    #[arg(short, long)]
+    config_path: Option<PathBuf>,
+}
+
+#[derive(clap::Args, Debug)]
+struct CheckArgs {
     #[arg(short, long)]
     config_path: Option<PathBuf>,
 }
@@ -88,6 +104,12 @@ async fn main() {
         }
         Commands::Init(args) => {
             handle_init_command(args).await;
+        }
+        Commands::Edit(args) => {
+            handle_edit_command(args).await;
+        }
+        Commands::Check(args) => {
+            handle_check_command(args).await;
         }
     }
 }
@@ -193,7 +215,7 @@ async fn handle_list_command(args: ListArgs) {
                 config.tasks.len()
             );
             for task in config.tasks {
-                println!("- [{}]: {}", task.name, task.cron_schedule.to_string());
+                println!("- [{}]: {}\n", task.name, task.cron_schedule.to_string());
                 println!(
                     "  Command: {} {:?}",
                     task.command,
@@ -253,24 +275,24 @@ async fn handle_init_command(args: InitArgs) {
         }
     }
 
-    let initial_config_content = r#"{
+    let initial_config_content = r#"{{
         "tasks": [
-        {
+        {{
             "name": "sample_ping",
             "cron_schedule": "*/10 * * * * *",
             "command": "/bin/sh",
             "args": [
                 "-c", "/bin/echo \"[Sample] Check at $(date)\""
             ]
-        },
-        {
+        }},
+        {{
             "name": "sample_cleanup",
             "cron_schedule": "0 0 0 * * *",
             "command": "usr/bin/find",
             "args": ["/tmp", "-type", "f", "-atime", "+7", "-delete"]
-        }
+        }}
         ]
-    }"#;
+    }}"#;
 
     fs::write(&config_path, initial_config_content).unwrap_or_else(|e| {
         error!(
@@ -286,4 +308,100 @@ async fn handle_init_command(args: InitArgs) {
     println!("\nNext steps:");
     println!("1. Edit the file to define your tasks.");
     println!("2. Run the daemon: `chronosync run`");
+}
+
+fn core_check_config(config_path: &PathBuf) -> Result<(), String> {
+    if !config_path.exists() {
+        return Err(format!("Configuration file not found at: {}", config_path.display()));
+    }
+
+    match load_config(config_path) {
+        Ok(config) => {
+            info!("Configuration check successful: {} tasks loaded.", config.tasks.len());
+            Ok(())
+        }
+        Err(e) => {
+            Err(format!("Validation failed: Invalid JSON or Cron Schedule.\n  Details: {}", e))
+        }
+    }
+}
+
+async fn handle_edit_command(args: EditArgs) {
+    debug!("Entered handle_edit_command with args: {:?}", args);
+    let config_path = match args.config_path {
+        Some(p) => p,
+        None => match get_config_path() {
+            Ok(p) => p,
+            Err(e) => {
+                error!("Error: Failed to determine configuration path.");
+                error!("Reason: {}", e);
+                process::exit(1);
+            }
+        },
+    };
+
+    debug!("Resolved config path: {}", config_path.display());
+
+    if !config_path.exists() {
+        error!("Error: Configuration file not found at path:");
+        error!("-> Path: {}", config_path.display());
+        process::exit(1);
+    }
+
+    let editor = env::var("EDITOR")
+        .or_else(|_| env::var("VISUAL"))
+        .unwrap_or_else(|_| {
+            error!("$EDITOR or $VISUAL environment variable not set. Falling back to 'vi'.");
+            "vi".to_string()
+        });
+
+    info!("Opening config file with editor: {}", editor);
+
+    let status = Command::new(&editor)
+        .arg(&config_path)
+        .status()
+        .unwrap_or_else(|e| {
+            error!("Failed to execute editor '{}': {}", editor, e);
+            process::exit(1);
+        });
+
+    if !status.success() {
+        error!("Editor process exited with an error status: {}", status);
+        process::exit(1);
+    }
+
+    info!("Configuration file edited. The daemon will reload automatically.");
+}
+
+async fn handle_check_command(args: CheckArgs) {
+    debug!("Entered handle_check_command with args: {:?}", args);
+    let config_path = match args.config_path {
+        Some(p) => p,
+        None => match get_config_path() {
+            Ok(p) => p,
+            Err(e) => {
+                error!("Error: Failed to determine configuration path.");
+                error!("Reason: {}", e);
+                process::exit(1);
+            }
+        },
+    };
+
+    debug!("Resolved config path: {}", config_path.display());
+
+    if !config_path.exists() {
+        error!("Error: Configuration file not found at path:");
+        error!("-> Path: {}", config_path.display());
+        process::exit(1);
+    }
+
+    match core_check_config(&config_path) {
+        Ok(_) => {
+            println!("Configuration check passed.");
+        }
+        Err(e) => {
+            error!("{}", e);
+            process::exit(1);
+        }
+    }
 }
