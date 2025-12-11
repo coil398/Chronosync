@@ -11,7 +11,7 @@ use std::path::PathBuf;
 fn get_config_path() -> Result<PathBuf, String> {
     if let Some(user_dirs) = UserDirs::new() {
         let home_dir = user_dirs.home_dir();
-        let config_path = home_dir.join(".config").join("chronosync").join("config.json");
+        let config_path = home_dir.join(".config").join("chronsync").join("config.json");
 
         return Ok(config_path);
     }
@@ -48,7 +48,7 @@ async fn main() {
         }
     });
 
-    println!("[Main] Chronosync Daemon started.");
+    println!("[Main] chronsync Daemon started.");
 
     match load_config(&config_path) {
         Ok(c) => {

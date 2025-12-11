@@ -1,6 +1,6 @@
-# 🕰️ Chronosync - Lightweight Task Scheduler Daemon
+# 🕰️ chronsync - Lightweight Task Scheduler Daemon
 
-Chronosyncは、Rustで構築された超軽量なCLIタスクスケジューラー（デーモン）です。
+chronsyncは、Rustで構築された超軽量なCLIタスクスケジューラー（デーモン）です。
 JSON設定ファイルに基づき、cronライクなスケジュールで外部コマンドを永続的に実行します。
 設定ファイルの変更を即座に検知し、実行中のタスクを停止・再構築（リロード）するホットリロード機能を備えています。
 
@@ -17,8 +17,8 @@ JSON設定ファイルに基づき、cronライクなスケジュールで外部
 
 ```bash
 # リポジトリのクローン
-git clone https://github.com/coil398/Chronosync.git
-cd Chronosync
+git clone https://github.com/coil398/chronsync.git
+cd chronsync
 
 # ローカルへのインストール (パスが通った場所にバイナリが配置されます)
 cargo install --path .
@@ -26,7 +26,7 @@ cargo install --path .
 
 ## ⚙️ 設定ファイル (`config.json`)
 
-Chronosyncの動作には設定ファイルが必須です。
+chronsyncの動作には設定ファイルが必須です。
 アプリケーションは起動時に標準的な設定ディレクトリ（XDG Base Directoryなど）を検索します。
 
 ### 設定ファイルの配置場所
@@ -35,9 +35,9 @@ Chronosyncの動作には設定ファイルが必須です。
 
 | OS | パス |
 | :--- | :--- |
-| **Linux / macOS** | `~/.config/chronosync/config.json` |
+| **Linux / macOS** | `~/.config/chronsync/config.json` |
 
-> 💡 **ヒント:** 初回起動時に設定ファイルが見つからない場合、Chronosyncは検索したパスをエラーログに出力して終了します。そのパスを参考にファイルを配置してください。
+> 💡 **ヒント:** 初回起動時に設定ファイルが見つからない場合、chronsyncは検索したパスをエラーログに出力して終了します。そのパスを参考にファイルを配置してください。
 
 ### 設定フォーマット
 
@@ -86,17 +86,17 @@ cargo run
 常駐プロセスとして動作させる場合、systemdのユーザーサービスとして登録するのが便利です。
 
 1.  **ユニットファイルの作成**
-    `~/.config/systemd/user/chronosync.service` を作成します（ディレクトリがない場合は作成してください）。
+    `~/.config/systemd/user/chronsync.service` を作成します（ディレクトリがない場合は作成してください）。
 
     ```ini
     [Unit]
-    Description=Chronosync Task Scheduler
+    Description=chronsync Task Scheduler
     After=network.target
 
     [Service]
     # cargo installでインストールしたバイナリのパスを指定
-    # "which chronosync" コマンドで確認できます (例: /home/ユーザー名/.cargo/bin/chronosync)
-    ExecStart=%h/.cargo/bin/chronosync
+    # "which chronsync" コマンドで確認できます (例: /home/ユーザー名/.cargo/bin/chronsync)
+    ExecStart=%h/.cargo/bin/chronsync
     
     # 常に再起動
     Restart=always
@@ -117,16 +117,16 @@ cargo run
     systemctl --user daemon-reload
 
     # サービスの起動
-    systemctl --user start chronosync
+    systemctl --user start chronsync
 
     # 自動起動の有効化
-    systemctl --user enable chronosync
+    systemctl --user enable chronsync
     ```
 
 3.  **ログの確認**
 
     ```bash
-    journalctl --user -u chronosync -f
+    journalctl --user -u chronsync -f
     ```
 
 ## 📂 プロジェクト構成
