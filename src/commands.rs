@@ -340,12 +340,12 @@ pub fn handle_check_command(args: CheckArgs) {
     }
 }
 
-pub fn handle_service_command(args: ServiceArgs) {
+pub fn handle_service_command(args: ServiceArgs, user: bool) {
     let label: ServiceLabel = "chronsync".parse().unwrap();
 
     let mut manager = <dyn ServiceManager>::native().expect("Failed to detect service manager");
 
-    if args.user {
+    if user {
         manager
             .set_level(ServiceLevel::User)
             .expect("Failed to set service level to User");

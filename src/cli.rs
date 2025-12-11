@@ -10,6 +10,9 @@ pub struct Cli {
     #[arg(short = 't', long, global = true)]
     pub worker_threads: Option<usize>,
 
+    #[arg(short, long, global = true)]
+    pub user: bool,
+
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -59,9 +62,6 @@ pub struct CheckArgs {
 pub struct ServiceArgs {
     #[command(subcommand)]
     pub action: ServiceAction,
-
-    #[arg(short, long)]
-    pub user: bool,
 }
 
 #[derive(Subcommand, Debug)]

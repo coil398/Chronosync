@@ -70,7 +70,7 @@ async fn async_main(cli: Cli) {
             handle_check_command(args);
         }
         Commands::Service(args) => {
-            handle_service_command(args);
+            handle_service_command(args, cli.user);
         }
         Commands::Exec(args) => {
             handle_exec_command(args).await;
