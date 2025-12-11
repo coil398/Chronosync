@@ -137,6 +137,18 @@ chronsync --user service start
 *   **停止:** `chronsync --user service stop` (ユーザーサービスの場合) または `sudo chronsync service stop` (システムサービスの場合)
 *   **アンインストール:** `chronsync --user service uninstall` (ユーザーサービスの場合) または `sudo chronsync service uninstall` (システムサービスの場合)
 
+#### ログの確認 (Linux - Systemd)
+
+サービスのログは `journalctl` コマンドで確認できます。
+
+```bash
+# システムサービスのログを確認 (リアルタイム監視)
+journalctl -u chronsync -f
+
+# ユーザーサービスのログを確認 (リアルタイム監視)
+journalctl --user -u chronsync -f
+```
+
 ---
 
 ### Systemd ユーザーサービスとして手動登録 (Linux)
