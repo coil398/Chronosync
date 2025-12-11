@@ -95,12 +95,29 @@ chronsync run
 `chronsync` はサービス管理機能を内蔵しており、コマンド一つで常駐サービス（デーモン）として登録・管理できます。
 Linux (Systemd), macOS (Launchd), Windows (Service) に対応しています。
 
+#### `--user` (グローバルオプション): ユーザーサービスとして操作
+
+`chronsync` の `service` コマンドは、デフォルトではシステムレベルのサービス（通常 `sudo` が必要）として操作しようとします。
+現在のユーザーの権限でサービスを管理したい場合は、`--user` グローバルオプションを付けてください。
+
+```bash
+# システムサービスとしてインストール (sudo が必要)
+sudo chronsync service install
+
+# ユーザーサービスとしてインストール (sudo 不要)
+chronsync --user service install
+```
+
 #### 1. サービスのインストール (登録)
 
 自動起動の設定も行われます。
 
 ```bash
-chronsync service install
+# システムサービスとしてインストール (sudo が必要)
+sudo chronsync service install
+
+# ユーザーサービスとしてインストール (sudo 不要)
+chronsync --user service install
 ```
 
 #### 2. サービスの開始
@@ -108,13 +125,17 @@ chronsync service install
 インストール後、サービスを開始します。
 
 ```bash
-chronsync service start
+# システムサービス
+sudo chronsync service start
+
+# ユーザーサービス
+chronsync --user service start
 ```
 
 #### その他のコマンド
 
-*   **停止:** `chronsync service stop`
-*   **アンインストール:** `chronsync service uninstall` (登録解除と削除)
+*   **停止:** `chronsync --user service stop` (ユーザーサービスの場合) または `sudo chronsync service stop` (システムサービスの場合)
+*   **アンインストール:** `chronsync --user service uninstall` (ユーザーサービスの場合) または `sudo chronsync service uninstall` (システムサービスの場合)
 
 ---
 
