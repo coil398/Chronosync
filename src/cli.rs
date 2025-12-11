@@ -18,6 +18,7 @@ pub enum Commands {
     Init(InitArgs),
     Edit(EditArgs),
     Check(CheckArgs),
+    Service(ServiceArgs),
 }
 
 #[derive(clap::Args, Debug)]
@@ -48,4 +49,18 @@ pub struct EditArgs {
 pub struct CheckArgs {
     #[arg(short, long)]
     pub config_path: Option<PathBuf>,
+}
+
+#[derive(clap::Args, Debug)]
+pub struct ServiceArgs {
+    #[command(subcommand)]
+    pub action: ServiceAction,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ServiceAction {
+    Install,
+    Uninstall,
+    Start,
+    Stop,
 }

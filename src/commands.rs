@@ -1,10 +1,15 @@
 use crate::cli::{CheckArgs, EditArgs, InitArgs, ListArgs, RunArgs};
+use crate::cli::{ServiceAction, ServiceArgs};
 use crate::config;
 use crate::config::load_config;
 use crate::scheduler::TaskScheduler;
 use crate::utils;
 use crate::watcher;
 use log::{debug, error, info};
+use service_manager::{
+    RestartPolicy, ServiceInstallCtx, ServiceLabel, ServiceLevel, ServiceManager, ServiceStartCtx,
+    ServiceStopCtx, ServiceUninstallCtx,
+};
 use std::env;
 use std::fs;
 use std::io::{self, Write};
@@ -331,6 +336,83 @@ pub fn handle_check_command(args: CheckArgs) {
         Err(e) => {
             error!("{}", e);
             process::exit(1);
+        }
+    }
+}
+
+pub fn handle_service_command(args: ServiceArgs) {
+    let label: ServiceLabel = "com.github.coil398.chronsync".parse().unwrap();
+
+    let manager = <dyn ServiceManager>::native().expect("Failed to detect service manager");
+
+    match args.action {
+        ServiceAction::Install => {
+            let exe_path = env::current_exe().unwrap_or_else(|_| {
+                error!("Failed to get current executable path");
+                process::exit(1);
+            });
+
+            info!("Installing service for binary: {}", exe_path.display());
+
+            let install_result = manager.install(ServiceInstallCtx {
+                label: label.clone(),
+                program: exe_path,
+                args: vec!["run".into()],
+                contents: None,
+                username: None,
+                working_directory: None,
+                environment: None,
+                autostart: true,
+                restart_policy: RestartPolicy::OnFailure {
+                    delay_secs: Some(10),
+                },
+            });
+
+            match install_result {
+                Ok(_) => {
+                    info!("Service installed successfully.");
+                    println!("To start the service immediately, run: `chronsync service start`");
+                }
+                Err(e) => {
+                    error!("Failed to install service: {}", e);
+                }
+            }
+        }
+        ServiceAction::Uninstall => {
+            match manager.uninstall(ServiceUninstallCtx {
+                label: label.clone(),
+            }) {
+                Ok(_) => {
+                    info!("Service uninstalled.");
+                }
+                Err(e) => {
+                    error!("Failed to uninstall: {}", e);
+                }
+            }
+        }
+        ServiceAction::Start => {
+            match manager.start(ServiceStartCtx {
+                label: label.clone(),
+            }) {
+                Ok(_) => {
+                    info!("Service started.");
+                }
+                Err(e) => {
+                    error!("Failed to start: {}", e);
+                }
+            }
+        }
+        ServiceAction::Stop => {
+            match manager.stop(ServiceStopCtx {
+                label: label.clone(),
+            }) {
+                Ok(_) => {
+                    info!("Service stopped.");
+                }
+                Err(e) => {
+                    error!("Failed to stop: {}", e);
+                }
+            }
         }
     }
 }

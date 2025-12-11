@@ -11,6 +11,7 @@ JSON設定ファイルに基づき、cronライクなスケジュールで外部
 * **🔄 ホットリロード:** 設定ファイル（`config.json`）の変更をリアルタイムで監視。サービスを再起動することなく、保存と同時にタスク定義を更新します。
 * **⏰ 詳細なスケジューリング:** 秒単位を含む [Cron形式](https://crates.io/crates/cron) で、精密な実行時刻の指定が可能。
 * **🚀 高パフォーマンス:** シングルバイナリで動作し、リソース消費を最小限に抑えます。
+* **💻 クロスプラットフォーム:** Linux, macOS, Windows でのサービス登録をサポート。
 
 ## 📦 インストールとビルド
 
@@ -22,7 +23,7 @@ git clone https://github.com/coil398/chronsync.git
 cd chronsync
 
 # ローカルへのインストール (パスが通った場所にバイナリが配置されます)
-cargo install --path .
+car go install --path .
 ```
 
 ## ⚙️ 設定ファイル (`config.json`)
@@ -33,6 +34,11 @@ chronsyncの動作には設定ファイルが必須です。
 ### 設定ファイルの配置場所
 
 設定ディレクトリに `config.json` を作成してください。
+便利な `init` コマンドでひな形を作成することもできます。
+
+```bash
+chronsync init
+```
 
 | OS | パス |
 | :--- | :--- |
@@ -79,12 +85,42 @@ JSON形式で `tasks` 配列を定義します。
 
 ```bash
 # コンパイルして実行
-cargo run
+car go run -- run
+# またはインストール済みなら
+chronsync run
 ```
 
-### Systemd ユーザーサービスとして登録 (Linux)
+### 常駐サービスとして登録 (推奨)
 
-常駐プロセスとして動作させる場合、systemdのユーザーサービスとして登録するのが便利です。
+`chronsync` はサービス管理機能を内蔵しており、コマンド一つで常駐サービス（デーモン）として登録・管理できます。
+Linux (Systemd), macOS (Launchd), Windows (Service) に対応しています。
+
+#### 1. サービスのインストール (登録)
+
+自動起動の設定も行われます。
+
+```bash
+chronsync service install
+```
+
+#### 2. サービスの開始
+
+インストール後、サービスを開始します。
+
+```bash
+chronsync service start
+```
+
+#### その他のコマンド
+
+*   **停止:** `chronsync service stop`
+*   **アンインストール:** `chronsync service uninstall` (登録解除と削除)
+
+---
+
+### Systemd ユーザーサービスとして手動登録 (Linux)
+
+手動で細かく設定したい場合は、以下の手順で Systemd に登録できます。
 
 1.  **ユニットファイルの作成**
     `~/.config/systemd/user/chronsync.service` を作成します（ディレクトリがない場合は作成してください）。
@@ -97,7 +133,7 @@ cargo run
     [Service]
     # cargo installでインストールしたバイナリのパスを指定
     # "which chronsync" コマンドで確認できます (例: /home/ユーザー名/.cargo/bin/chronsync)
-    ExecStart=%h/.cargo/bin/chronsync
+    ExecStart=%h/.cargo/bin/chronsync run
     
     # 常に再起動
     Restart=always
@@ -115,13 +151,13 @@ cargo run
 
     ```bash
     # 設定の再読み込み
-systemctl --user daemon-reload
+    systemctl --user daemon-reload
 
     # サービスの起動
-systemctl --user start chronsync
+    systemctl --user start chronsync
 
     # 自動起動の有効化
-systemctl --user enable chronsync
+    systemctl --user enable chronsync
     ```
 
 3.  **ログの確認**
@@ -135,10 +171,13 @@ systemctl --user enable chronsync
 ```
 .
 ├── src/
-│   ├── main.rs       # エントリーポイント、初期化、メインループ
+│   ├── main.rs       # エントリーポイント
+│   ├── commands.rs   # 各コマンドのハンドラ
+│   ├── cli.rs        # CLI引数の定義
 │   ├── config.rs     # 設定ファイルの定義と読み込みロジック
 │   ├── scheduler.rs  # タスクのスケジューリングと実行管理
-│   └── watcher.rs    # 設定ファイルの変更監視
+│   ├── watcher.rs    # 設定ファイルの変更監視
+│   └── utils.rs      # ユーティリティ
 ├── config.json       # 設定ファイルのサンプル
 └── Cargo.toml        # 依存関係定義
 ```
