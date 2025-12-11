@@ -2,6 +2,10 @@
 name = "Chronosync"
 version = "0.1.2"
 edition = "2021"
+authors = ["t.kawase398@gmail.com"]
+license = "MIT"
+description = "Lightweight, real-time reloading cron-like task scheduler daemon"
+repository = "https://github.com/coil398/Chronosync"
 
 [dependencies]
 chrono = { version = "0.4.42", features = ["serde"] }
