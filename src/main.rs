@@ -6,7 +6,9 @@ use tokio::sync::mpsc;
 mod scheduler;
 use clap::{Parser, Subcommand};
 use directories::UserDirs;
+use log::{debug, error, info, LevelFilter};
 use scheduler::TaskScheduler;
+use simple_logger::SimpleLogger;
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -54,42 +56,48 @@ fn get_config_path() -> Result<PathBuf, String> {
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
-    if cli.verbose {
-        println!("[DEBUG] Parsed CLI: {:?}", cli);
-    }
+    let log_level = if cli.verbose {
+        LevelFilter::Debug
+    } else {
+        LevelFilter::Info
+    };
+
+    SimpleLogger::new()
+        .with_level(log_level)
+        .init()
+        .expect("Failed to initialize logger");
+
+    debug!("Parsed CLI: {:?}", cli);
 
     match cli.command {
         Commands::Run(args) => {
-            handle_run_command(args, cli.verbose).await;
+            handle_run_command(args).await;
         }
         Commands::List(args) => {
-            if cli.verbose {
-                println!("[DEBUG] Dispatching to handle_list_command");
-            }
-            handle_list_command(args, cli.verbose).await;
+            debug!("Dispatching to handle_list_command");
+            handle_list_command(args).await;
         }
     }
 }
 
-async fn handle_run_command(args: RunArgs, verbose: bool) {
+async fn handle_run_command(args: RunArgs) {
+    debug!("Entered handle_run_command with args: {:?}", args);
     let config_path = match args.config_path {
         Some(p) => p,
         None => match get_config_path() {
             Ok(p) => p,
             Err(e) => {
-                eprintln!("Initialization Error: {}", e);
+                error!("Initialization Error: {}", e);
                 process::exit(1);
             }
         },
     };
 
-    if verbose {
-        println!("[DEBUG] Config path resolved to: {}", config_path.display());
-    }
+    debug!("Resolved config path: {}", config_path.display());
 
     if !config_path.exists() {
-        eprintln!("Initialization Error: Configuration file not found at path:");
-        eprintln!("-> Path: {}", config_path.display());
+        error!("Initialization Error: Configuration file not found at path:");
+        error!("-> Path: {}", config_path.display());
         process::exit(1);
     }
 
@@ -102,19 +110,19 @@ async fn handle_run_command(args: RunArgs, verbose: bool) {
 
     tokio::spawn(async move {
         if let Err(e) = watcher::start_watcher(&watcher_path, tx_clone).await {
-            eprintln!("Watcher failed: {:?}", e);
+            error!("Watcher failed: {:?}", e);
         }
     });
 
-    println!("[Main] chronsync Daemon started.");
+    info!("[Main] chronsync Daemon started.");
 
     match load_config(&config_path) {
         Ok(c) => {
-            println!("[Main] Initial config loaded. {} tasks.", c.tasks.len());
+            info!("[Main] Initial config loaded. {} tasks.", c.tasks.len());
             scheduler.reload_tasks(c);
         }
         Err(e) => {
-            eprintln!("[Main] Failed to load initial config. Existing: {}", e);
+            error!("[Main] Failed to load initial config. Existing: {}", e);
             return;
         }
     };
@@ -122,20 +130,20 @@ async fn handle_run_command(args: RunArgs, verbose: bool) {
     loop {
         tokio::select! {
             Some(_) = rx_reload.recv() => {
-                println!("\n>>> CONFIG CHANGE DETECTED! RELOADING... <<<");
+                info!("\n>>> CONFIG CHANGE DETECTED! RELOADING... <<<");
 
                 match load_config(&config_path) {
                     Ok(new_config) => {
                         scheduler.reload_tasks(new_config);
-                        println!("[Main] New configuration applied. Tasks reloaded.");
+                        info!("[Main] New configuration applied. Tasks reloaded.");
                     },
                     Err(e) => {
-                        eprintln!("[Main] Error reloading configuration (Configuration rejected): {}", e);
+                        error!("[Main] Error reloading configuration (Configuration rejected): {}", e);
                     }
                 }
             }
             _ = tokio::signal::ctrl_c() => {
-                println!("\n[Main] Ctrl+C received. Shutting down gracefully...");
+                info!("\n[Main] Ctrl+C received. Shutting down gracefully...");
                 scheduler.reload_tasks(config::Config { tasks: vec![] });
                 break;
             }
@@ -143,26 +151,25 @@ async fn handle_run_command(args: RunArgs, verbose: bool) {
     }
 }
 
-async fn handle_list_command(args: ListArgs, verbose: bool) {
+async fn handle_list_command(args: ListArgs) {
+    debug!("Entered handle_list_command with args: {:?}", args);
     let config_path = match args.config_path {
         Some(p) => p,
         None => match get_config_path() {
             Ok(p) => p,
             Err(e) => {
-                eprintln!("Error: Failed to determine configuration path.");
-                eprintln!("Reason: {}", e);
+                error!("Error: Failed to determine configuration path.");
+                error!("Reason: {}", e);
                 process::exit(1);
             }
         },
     };
 
-    if verbose {
-        println!("[DEBUG] Config path resolved to: {}", config_path.display());
-    }
+    debug!("Resolved config path: {}", config_path.display());
 
     if !config_path.exists() {
-        eprintln!("Error: Configuration file not found at path:");
-        eprintln!("-> Path: {}", config_path.display());
+        error!("Error: Configuration file not found at path:");
+        error!("-> Path: {}", config_path.display());
         process::exit(1);
     }
 
@@ -184,8 +191,8 @@ async fn handle_list_command(args: ListArgs, verbose: bool) {
             }
         }
         Err(e) => {
-            eprintln!("Error loading configuration: {}", e);
-            eprintln!("The configuration file contains invalid JSON or an invalid cron schedule.");
+            error!("Error loading configuration: {}", e);
+            error!("The configuration file contains invalid JSON or an invalid cron schedule.");
             process::exit(1);
         }
     }

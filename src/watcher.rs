@@ -1,4 +1,5 @@
 // use notify::EventKind;
+use log::{error, info, warn};
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 // use std::io::{self, Write};
 use std::path::Path;
@@ -12,14 +13,14 @@ pub async fn start_watcher(path: &Path, tx_reload: mpsc::Sender<()>) -> notify::
         Ok(event) => {
             if event.kind.is_modify() {
                 if let Err(e) = tx_watcher.try_send(()) {
-                    eprintln!(
+                    error!(
                         "[Watcher] Failed to send event to internal channel: {:?}",
                         e
                     );
                 }
             }
         }
-        Err(e) => eprintln!("[Watcher] Watch error: {:?}", e),
+        Err(e) => error!("[Watcher] Watch error: {:?}", e),
     };
 
     let mut watcher = RecommendedWatcher::new(
@@ -29,7 +30,7 @@ pub async fn start_watcher(path: &Path, tx_reload: mpsc::Sender<()>) -> notify::
 
     watcher.watch(path, RecursiveMode::NonRecursive)?;
 
-    println!("[Watcher] File watcher started on: {:?}", path);
+    info!("[Watcher] File watcher started on: {:?}", path);
 
     loop {
         if rx_watcher.recv().await.is_none() {
@@ -40,15 +41,15 @@ pub async fn start_watcher(path: &Path, tx_reload: mpsc::Sender<()>) -> notify::
 
         while rx_watcher.try_recv().is_ok() {}
 
-        println!("[Watcher] Debounced and sent reload signal.");
+        info!("[Watcher] Debounced and sent reload signal.");
 
         match tx_reload.try_send(()) {
             Ok(_) => {}
             Err(mpsc::error::TrySendError::Full(_)) => {
-                println!("[Watcher] Main loop is busy. Dropping reload signal.");
+                warn!("[Watcher] Main loop is busy. Dropping reload signal.");
             }
             Err(e) => {
-                eprintln!("[Watcher] Failed to send reload signal: {:?}", e);
+                error!("[Watcher] Failed to send reload signal: {:?}", e);
                 break;
             }
         }

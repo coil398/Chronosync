@@ -1,5 +1,6 @@
 use crate::config::{Config, Task};
 use cron::Schedule;
+use log::{error, info, warn};
 use std::sync::{Arc, Mutex};
 use tokio::process::Command;
 use tokio::task::JoinHandle;
@@ -19,7 +20,7 @@ impl TaskScheduler {
     }
 
     pub fn reload_tasks(&mut self, config: Config) {
-        println!(
+        info!(
             "[Scheduler] Stopping {} existing tasks...",
             self.job_handles.len()
         );
@@ -30,7 +31,7 @@ impl TaskScheduler {
             }
         }
 
-        println!(
+        info!(
             "[Scheduler] Existing tasks stopped. Registering {} new tasks...",
             config.tasks.len()
         );
@@ -50,7 +51,7 @@ impl TaskScheduler {
 
         self.job_handles.push(handle_ref.clone());
 
-        println!(
+        info!(
             "[Scheduler] Registering task '{}' with schedule: {}",
             name, schedule
         );
@@ -84,7 +85,7 @@ impl TaskScheduler {
                 TaskScheduler::execute_command(&name, &command, args.as_deref().unwrap_or(&[]))
                     .await;
             } else {
-                eprintln!(
+                warn!(
                     "[{}] Schedule ended or failed to calculate next time.",
                     name
                 );
@@ -94,7 +95,7 @@ impl TaskScheduler {
     }
 
     async fn execute_command(name: &str, command: &str, args: &[String]) {
-        println!("[{}] -> Command starting: {} {:?}", name, command, args);
+        info!("[{}] -> Command starting: {} {:?}", name, command, args);
 
         let mut cmd_to_run = Command::new(command);
         cmd_to_run.args(args);
@@ -105,19 +106,19 @@ impl TaskScheduler {
                 let stderr = String::from_utf8_lossy(&output.stderr);
 
                 if output.status.success() {
-                    println!("[{}] -> Command SUCCESS. Status: {}", name, output.status);
+                    info!("[{}] -> Command SUCCESS. Status: {}", name, output.status);
                     if !stdout.trim().is_empty() {
-                        println!("[{}] -> STDOUT:\n{}", name, stdout.trim());
+                        info!("[{}] -> STDOUT:\n{}", name, stdout.trim());
                     }
                 } else {
-                    eprintln!("[{}] -> Command FAILED. Status: {}", name, output.status);
+                    error!("[{}] -> Command FAILED. Status: {}", name, output.status);
                     if !stderr.trim().is_empty() {
-                        eprintln!("[{}] -> STDERR:\n{}", name, stderr.trim());
+                        error!("[{}] -> STDERR:\n{}", name, stderr.trim());
                     }
                 }
             }
             Err(e) => {
-                eprintln!(
+                error!(
                     "[{}] -> Execution error: Failed to run command '{}': {}",
                     name, command, e
                 );
